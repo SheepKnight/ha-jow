@@ -17,3 +17,7 @@ htmlcov/
 .vscode/
 .idea/
 *.swp
+
+# Local credentials
+test_credentials.json
+
