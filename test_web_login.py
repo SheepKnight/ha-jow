@@ -242,30 +242,32 @@ class TestLoginServer:
         callback_url = f"http://{HOST}:{PORT}/api/jow/callback"
         return f"""(function(){{
   try {{
-    let d = localStorage.getItem('jow:auth:deviceId') || localStorage.getItem('deviceId');
-    let r = localStorage.getItem('jow:auth:refreshToken') || localStorage.getItem('refreshToken');
-    if (!r) {{
-      for (let i = 0; i < localStorage.length; i++) {{
-        let k = localStorage.key(i);
-        let v = localStorage.getItem(k);
-        if (v && v.includes('refreshToken')) {{
-          try {{
-            let parsed = JSON.parse(v);
-            r = parsed.refreshToken || r;
-            d = parsed.deviceId || d;
-          }} catch(e) {{}}
-        }}
+    const el = document.getElementById('__next') || document.body;
+    const key = Object.keys(el).find(k => k.startsWith('__reactContainer') || k.startsWith('__reactFiber'));
+    let queue = [el[key]];
+    let state = null;
+    while (queue.length > 0) {{
+      let node = queue.shift();
+      if (!node) continue;
+      if (node.memoizedProps?.store?.getState) {{
+        state = node.memoizedProps.store.getState();
+        break;
       }}
+      if (node.child) queue.push(node.child);
+      if (node.sibling) queue.push(node.sibling);
     }}
-    if (!r) {{
+    if (!state?.auth?.refreshToken) {{
       alert('Could not find active Jow session. Please log in on jow.fr first!');
       return;
     }}
+    const deviceId = state.deviceFingerprint || state.fingerprint?.deviceFingerprint || state.auth?.deviceId || 'web:auto';
+    const refreshToken = state.auth.refreshToken;
+
     fetch('{callback_url}', {{
       method: 'POST',
       mode: 'cors',
       headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ deviceId: d || 'web:auto', refreshToken: r }})
+      body: JSON.stringify({{ deviceId: deviceId, refreshToken: refreshToken }})
     }}).then(res => res.json()).then(data => {{
       if (data.success) {{
         alert('🎉 Jow successfully connected as ' + data.user_name + '! Return to your terminal.');
@@ -279,6 +281,7 @@ class TestLoginServer:
     alert('Failed to read Jow session: ' + err.message);
   }}
 }})();"""
+
 
     async def handle_login_page(self, request: web.Request) -> web.Response:
         raw_js = self._get_js_payload()
