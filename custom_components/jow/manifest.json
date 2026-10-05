@@ -1,0 +1,12 @@
+{
+  "domain": "jow",
+  "name": "Jow",
+  "codeowners": ["@SheepKnight"],
+  "config_flow": true,
+  "documentation": "https://github.com/SheepKnight/ha-jow",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/SheepKnight/ha-jow/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

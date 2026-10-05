@@ -1,0 +1,35 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion Jow",
+        "description": "Choisissez comment vous souhaitez connecter votre compte Jow :",
+        "menu_options": {
+          "webview": "Assistant de connexion Web (Recommandé)",
+          "manual": "Saisie manuelle des jetons"
+        }
+      },
+      "webview": {
+        "title": "Assistant de connexion Web",
+        "description": "1. Ouvrez l'[Assistant de connexion Jow]({login_url}) (dans un nouvel onglet).\n2. Suivez les étapes pour lier votre session en 1 clic.\n3. Une fois terminé, cliquez sur **Soumettre** ci-dessous pour finaliser la configuration."
+      },
+      "manual": {
+        "title": "Identifiants manuels",
+        "description": "Entrez votre Device ID et votre Refresh Token issus de votre session Jow.",
+        "data": {
+          "device_id": "Device ID",
+          "refresh_token": "Refresh Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossible de se connecter aux serveurs Jow.",
+      "invalid_auth": "Device ID ou Refresh Token invalide.",
+      "web_auth_pending": "Aucune session reçue pour le moment. Veuillez suivre les instructions dans l'assistant de connexion.",
+      "unknown": "Une erreur inattendue est survenue."
+    },
+    "abort": {
+      "already_configured": "Ce compte Jow est déjà configuré."
+    }
+  }
+}

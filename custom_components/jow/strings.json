@@ -1,0 +1,35 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Jow Login",
+        "description": "Choose how you want to connect your Jow account:",
+        "menu_options": {
+          "webview": "Web Login Helper (Recommended)",
+          "manual": "Manual Token Entry"
+        }
+      },
+      "webview": {
+        "title": "Web Login Helper",
+        "description": "1. Open the [Jow Login Helper]({login_url}) (opens in a new tab).\n2. Follow the instructions to link your browser session with 1 click.\n3. Once done, click **Submit** below to finish setup."
+      },
+      "manual": {
+        "title": "Manual Credentials",
+        "description": "Enter your Jow Device ID and Refresh Token from your browser session.",
+        "data": {
+          "device_id": "Device ID",
+          "refresh_token": "Refresh Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Jow servers.",
+      "invalid_auth": "Invalid Device ID or Refresh Token.",
+      "web_auth_pending": "No active session received yet. Please follow the instructions in the login helper first.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Jow account is already configured."
+    }
+  }
+}
