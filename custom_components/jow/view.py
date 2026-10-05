@@ -273,11 +273,26 @@ def build_bookmarklet_code(host_url: str) -> str:
 def ensure_views_registered(hass: HomeAssistant) -> None:
     """Ensure HTTP views are registered in Home Assistant."""
     hass.data.setdefault(DOMAIN, {})
-    if not hass.data[DOMAIN].get("views_registered"):
+    if hass.data[DOMAIN].get("views_registered"):
+        return
+
+    # Check existing registered resources in router to avoid duplicate registration
+    try:
+        registered_paths = [
+            resource.canonical
+            for resource in hass.http.app.router.resources()
+            if hasattr(resource, "canonical")
+        ]
+    except Exception:
+        registered_paths = []
+
+    if VIEW_LOGIN_URL not in registered_paths:
         hass.http.register_view(JowLoginView())
+    if VIEW_CALLBACK_URL not in registered_paths:
         hass.http.register_view(JowCallbackView())
-        hass.data[DOMAIN]["views_registered"] = True
-        _LOGGER.info("Registered Jow HTTP views (/api/jow/login, /api/jow/callback)")
+
+    hass.data[DOMAIN]["views_registered"] = True
+    _LOGGER.info("Registered Jow HTTP views (/api/jow/login, /api/jow/callback)")
 
 
 class JowLoginView(HomeAssistantView):
@@ -319,7 +334,7 @@ class JowCallbackView(HomeAssistantView):
     name = "api:jow:callback"
     requires_auth = False
 
-    # Allow CORS requests from jow.fr
+    # Allow CORS requests from jow.fr (Home Assistant will automatically attach OPTIONS preflight)
     cors_allowed = True
 
     async def post(self, request: web.Request) -> web.Response:
@@ -374,12 +389,3 @@ class JowCallbackView(HomeAssistantView):
             "Access-Control-Allow-Headers": "Content-Type",
         })
 
-    async def options(self, request: web.Request) -> web.Response:
-        """Handle CORS preflight options request."""
-        return web.Response(
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type",
-            }
-        )
