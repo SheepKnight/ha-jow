@@ -10,7 +10,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import JowApiClient, JowAuthError, JowConnectionError
 from .const import CONF_DEVICE_ID, CONF_REFRESH_TOKEN, DOMAIN
-from .view import VIEW_LOGIN_URL
+from .view import VIEW_LOGIN_URL, ensure_views_registered
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,6 +31,8 @@ class JowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Handle the initial step - choose between web view helper and manual."""
+        ensure_views_registered(self.hass)
+
         # If user already used the web login helper and tokens are waiting, offer direct confirmation
         pending_auth = self.hass.data.get(DOMAIN, {}).get("latest_web_auth")
         if pending_auth:
@@ -45,7 +47,9 @@ class JowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Guide user through the browser web view / bookmarklet login."""
+        ensure_views_registered(self.hass)
         errors: Dict[str, str] = {}
+
 
         if user_input is not None:
             pending_auth = self.hass.data.get(DOMAIN, {}).get("latest_web_auth")

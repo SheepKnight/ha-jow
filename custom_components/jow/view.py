@@ -5,6 +5,7 @@ from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.network import get_url
 
 from .api import JowApiClient, JowAuthError
 from .const import CONF_DEVICE_ID, CONF_REFRESH_TOKEN, DOMAIN
@@ -23,6 +24,7 @@ LOGIN_HTML_PAGE = """<!DOCTYPE html>
   <style>
     :root {
       --primary: #FF5C39;
+      --primary-hover: #E04D2B;
       --bg: #121820;
       --card-bg: #1C2430;
       --text: #F3F4F6;
@@ -38,16 +40,16 @@ LOGIN_HTML_PAGE = """<!DOCTYPE html>
       align-items: center;
       min-height: 100vh;
       margin: 0;
-      padding: 1rem;
+      padding: 1.5rem;
       box-sizing: border-box;
     }
     .card {
       background: var(--card-bg);
       border-radius: 1rem;
       padding: 2rem;
-      max-width: 540px;
+      max-width: 580px;
       width: 100%;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
     h1 {
       margin-top: 0;
@@ -60,15 +62,17 @@ LOGIN_HTML_PAGE = """<!DOCTYPE html>
     p {
       color: var(--muted);
       line-height: 1.5;
+      margin: 0.5rem 0 1.25rem 0;
     }
     .step {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 0.5rem;
-      padding: 1rem;
-      margin: 1rem 0;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
     }
     .step-number {
-      font-weight: bold;
+      font-weight: 600;
       color: var(--primary);
       margin-right: 0.5rem;
     }
@@ -84,14 +88,32 @@ LOGIN_HTML_PAGE = """<!DOCTYPE html>
       margin: 0.5rem 0;
       user-select: none;
     }
-    .btn-manual {
+    .bookmarklet-btn:hover {
+      background: var(--primary-hover);
+    }
+    .code-box {
+      background: #0D1117;
+      border: 1px solid #30363D;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #58A6FF;
+      word-break: break-all;
+      margin: 0.5rem 0;
+    }
+    .btn {
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
       color: white;
       padding: 0.5rem 1rem;
       border-radius: 0.5rem;
       cursor: pointer;
-      margin-top: 0.5rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
     textarea {
       width: 100%;
@@ -130,30 +152,33 @@ LOGIN_HTML_PAGE = """<!DOCTYPE html>
 <body>
   <div class="card">
     <h1>🍳 Connect Jow to Home Assistant</h1>
-    <p>Because Jow supports multiple login methods (Google, Apple, Email), use this 1-click helper to securely pair your session.</p>
+    <p>Because Jow uses session authentication, use either of these methods to link your browser session with 1 click.</p>
 
+    <!-- Method 1: Bookmarklet -->
     <div class="step">
-      <div><span class="step-number">Step 1</span>Drag this button to your browser Bookmarks Bar:</div>
-      <div style="text-align: center; margin: 0.75rem 0;">
+      <div><span class="step-number">Method 1</span><strong>1-Click Bookmarklet</strong></div>
+      <div style="font-size: 0.85rem; color: var(--muted); margin: 0.5rem 0;">1. Drag this button to your Bookmarks Bar:</div>
+      <div style="text-align: center;">
         <a class="bookmarklet-btn" href="javascript:%%BOOKMARKLET_CODE%%">⭐ Connect to Home Assistant</a>
       </div>
-      <div style="font-size: 0.85rem; color: var(--muted);">Or keep it handy on your bookmarks bar.</div>
+      <div style="font-size: 0.85rem; color: var(--muted);">2. Open <a href="https://jow.fr/cooking" target="_blank" style="color: var(--primary);">jow.fr/cooking</a> (logged in) and click this bookmarklet!</div>
     </div>
 
+    <!-- Method 2: Console Snippet -->
     <div class="step">
-      <div><span class="step-number">Step 2</span>Open <a href="https://jow.fr/cooking" target="_blank" style="color: var(--primary);">jow.fr</a> and make sure you are logged in.</div>
+      <div><span class="step-number">Method 2</span><strong>DevTools Console Snippet</strong></div>
+      <div style="font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem;">
+        On <a href="https://jow.fr/cooking" target="_blank" style="color: var(--primary);">jow.fr/cooking</a>, press <strong>F12</strong> &rarr; <strong>Console</strong>, paste and run:
+      </div>
+      <div class="code-box" id="snippetCode">%%SNIPPET_CODE%%</div>
+      <button class="btn" onclick="copySnippet()">📋 Copy Snippet</button>
     </div>
 
-    <div class="step">
-      <div><span class="step-number">Step 3</span>While viewing Jow in your browser, click the bookmarklet!</div>
-      <p style="font-size: 0.85rem; margin-bottom: 0;">It securely extracts your local session and connects directly to Home Assistant.</p>
-    </div>
-
-    <details style="margin-top: 1.5rem;">
-      <summary style="cursor: pointer; color: var(--muted); font-size: 0.9rem;">Advanced: Manual paste</summary>
+    <details style="margin-top: 1rem;">
+      <summary style="cursor: pointer; color: var(--muted); font-size: 0.85rem;">Advanced: Manual token paste</summary>
       <div style="margin-top: 0.5rem;">
         <textarea id="manualInput" rows="3" placeholder='Paste {"deviceId": "...", "refreshToken": "..."}'></textarea>
-        <button class="btn-manual" onclick="submitManual()">Submit Credentials</button>
+        <button class="btn" onclick="submitManual()">Submit Credentials</button>
       </div>
     </details>
 
@@ -161,6 +186,13 @@ LOGIN_HTML_PAGE = """<!DOCTYPE html>
   </div>
 
   <script>
+    function copySnippet() {
+      const code = document.getElementById('snippetCode').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('Snippet copied! Open jow.fr/cooking, press F12 -> Console, and press Enter to link.');
+      });
+    }
+
     function showStatus(text, isSuccess) {
       const el = document.getElementById('status');
       el.className = isSuccess ? 'success' : 'error';
@@ -178,7 +210,7 @@ LOGIN_HTML_PAGE = """<!DOCTYPE html>
         });
         const res = await resp.json();
         if (resp.ok) {
-          showStatus('✅ Successfully connected! You can now return to Home Assistant.', true);
+          showStatus('✅ Successfully connected! Return to Home Assistant to finish setup.', true);
         } else {
           showStatus('❌ ' + (res.error || 'Failed to authenticate with Jow'), false);
         }
@@ -238,6 +270,15 @@ def build_bookmarklet_code(host_url: str) -> str:
     return js.replace("\n", "").replace("  ", "")
 
 
+def ensure_views_registered(hass: HomeAssistant) -> None:
+    """Ensure HTTP views are registered in Home Assistant."""
+    hass.data.setdefault(DOMAIN, {})
+    if not hass.data[DOMAIN].get("views_registered"):
+        hass.http.register_view(JowLoginView())
+        hass.http.register_view(JowCallbackView())
+        hass.data[DOMAIN]["views_registered"] = True
+        _LOGGER.info("Registered Jow HTTP views (/api/jow/login, /api/jow/callback)")
+
 
 class JowLoginView(HomeAssistantView):
     """View to render the Jow web login helper page."""
@@ -249,13 +290,24 @@ class JowLoginView(HomeAssistantView):
     async def get(self, request: web.Request) -> web.Response:
         """Render the webview helper page."""
         hass: HomeAssistant = request.app["hass"]
-        # Use the configured internal/external URL or fallback to Host header
-        host = request.headers.get("Host", "localhost:8123")
-        scheme = request.scheme or "http"
-        host_url = f"{scheme}://{host}"
+
+        # Resolve correct external/internal base URL (handles reverse proxies & HTTPS)
+        try:
+            host_url = get_url(hass, prefer_external=True)
+        except Exception:
+            proto = request.headers.get("X-Forwarded-Proto") or request.scheme or "http"
+            host = request.headers.get("X-Forwarded-Host") or request.headers.get("Host", "localhost:8123")
+            host_url = f"{proto}://{host}"
+
+        # Strip any trailing slash
+        host_url = host_url.rstrip("/")
 
         bookmarklet_code = build_bookmarklet_code(host_url)
-        content = LOGIN_HTML_PAGE.replace("%%BOOKMARKLET_CODE%%", bookmarklet_code)
+        content = (
+            LOGIN_HTML_PAGE
+            .replace("%%BOOKMARKLET_CODE%%", bookmarklet_code)
+            .replace("%%SNIPPET_CODE%%", bookmarklet_code)
+        )
 
         return web.Response(text=content, content_type="text/html")
 

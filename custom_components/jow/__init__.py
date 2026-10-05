@@ -9,7 +9,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import JowApiClient
 from .const import CONF_DEVICE_ID, CONF_REFRESH_TOKEN, DOMAIN
 from .coordinator import JowDataUpdateCoordinator
-from .view import JowLoginView, JowCallbackView
+from .view import ensure_views_registered
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,13 +20,9 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Jow component."""
-    hass.data.setdefault(DOMAIN, {})
-
-    # Register web login views
-    hass.http.register_view(JowLoginView())
-    hass.http.register_view(JowCallbackView())
-
+    ensure_views_registered(hass)
     return True
+
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
