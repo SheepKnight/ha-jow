@@ -64,10 +64,10 @@ class JowPendingMenuSensor(JowBaseSensor):
 
     @property
     def native_value(self) -> int:
-        """Return the number of meals in the pending menu."""
+        """Return the number of remaining (uncooked) meals in the pending menu."""
         menu = self.letscook_data.get("pendingMenu") or {}
         meals = menu.get("meals") or menu.get("recipes") or []
-        return len(meals)
+        return len([m for m in meals if not m.get("isCooked", False)])
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
@@ -76,9 +76,15 @@ class JowPendingMenuSensor(JowBaseSensor):
         menu = self.letscook_data.get("pendingMenu") or {}
         meals = menu.get("meals") or menu.get("recipes") or []
         formatted = [format_recipe(m) for m in meals]
+        remaining = [r for r in formatted if not r.get("is_cooked")]
+        cooked = [r for r in formatted if r.get("is_cooked")]
         return {
-            "count": len(formatted),
+            "count": len(remaining),
+            "total_count": len(formatted),
+            "remaining_count": len(remaining),
+            "cooked_count": len(cooked),
             "recipes": formatted,
+            "remaining_recipes": remaining,
             "recipes_json": json.dumps(formatted, ensure_ascii=False),
         }
 
@@ -91,10 +97,10 @@ class JowRecipesToCookSensor(JowBaseSensor):
 
     @property
     def native_value(self) -> int:
-        """Return the count of recipes to cook."""
+        """Return the count of remaining (uncooked) recipes to cook."""
         recipes_data = self.letscook_data.get("recipesToCook") or {}
         meals = recipes_data.get("meals") or recipes_data.get("recipes") or []
-        return len(meals)
+        return len([m for m in meals if not m.get("isCooked", False)])
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
@@ -103,9 +109,15 @@ class JowRecipesToCookSensor(JowBaseSensor):
         recipes_data = self.letscook_data.get("recipesToCook") or {}
         meals = recipes_data.get("meals") or recipes_data.get("recipes") or []
         formatted = [format_recipe(m) for m in meals]
+        remaining = [r for r in formatted if not r.get("is_cooked")]
+        cooked = [r for r in formatted if r.get("is_cooked")]
         return {
-            "count": len(formatted),
+            "count": len(remaining),
+            "total_count": len(formatted),
+            "remaining_count": len(remaining),
+            "cooked_count": len(cooked),
             "recipes": formatted,
+            "remaining_recipes": remaining,
             "recipes_json": json.dumps(formatted, ensure_ascii=False),
         }
 

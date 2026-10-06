@@ -56,6 +56,8 @@ def format_recipe(meal: Dict[str, Any]) -> Dict[str, Any]:
         else None
     )
 
+    is_cooked = bool(meal.get("isCooked", False))
+
     return {
         "id": rec_id,
         "title": rec.get("title") or meal.get("title") or "Unknown Recipe",
@@ -66,6 +68,7 @@ def format_recipe(meal: Dict[str, Any]) -> Dict[str, Any]:
         "recipe_url": url,
         "author": author_name,
         "ingredients": ingredients,
+        "is_cooked": is_cooked,
     }
 
 
@@ -107,6 +110,7 @@ class JowBaseTodoList(CoordinatorEntity[JowDataUpdateCoordinator], TodoListEntit
         self._attr_unique_id = f"{entry.unique_id}_todo_{key}"
         self._attr_icon = icon
         self._completed_uids: Set[str] = set()
+        self._uncompleted_uids: Set[str] = set()
 
     @property
     def letscook_data(self) -> Dict[str, Any]:
@@ -140,9 +144,15 @@ class JowBaseTodoList(CoordinatorEntity[JowDataUpdateCoordinator], TodoListEntit
             if r.get("recipe_url"):
                 desc += f" • {r['recipe_url']}"
 
+            is_cooked = r.get("is_cooked", False)
+            if uid in self._completed_uids:
+                is_cooked = True
+            elif uid in self._uncompleted_uids:
+                is_cooked = False
+
             status = (
                 TodoItemStatus.COMPLETED
-                if uid in self._completed_uids
+                if is_cooked
                 else TodoItemStatus.NEEDS_ACTION
             )
 
@@ -160,9 +170,15 @@ class JowBaseTodoList(CoordinatorEntity[JowDataUpdateCoordinator], TodoListEntit
     def extra_state_attributes(self) -> Dict[str, Any]:
         """Return extra state attributes including JSON output."""
         recipes = self.get_formatted_recipes()
+        remaining = [r for r in recipes if not r.get("is_cooked")]
+        cooked = [r for r in recipes if r.get("is_cooked")]
         return {
-            "count": len(recipes),
+            "count": len(remaining),
+            "total_count": len(recipes),
+            "remaining_count": len(remaining),
+            "cooked_count": len(cooked),
             "recipes": recipes,
+            "remaining_recipes": remaining,
             "recipes_json": json.dumps(recipes, ensure_ascii=False),
         }
 
@@ -171,8 +187,10 @@ class JowBaseTodoList(CoordinatorEntity[JowDataUpdateCoordinator], TodoListEntit
         if item.uid:
             if item.status == TodoItemStatus.COMPLETED:
                 self._completed_uids.add(item.uid)
-            elif item.uid in self._completed_uids:
-                self._completed_uids.remove(item.uid)
+                self._uncompleted_uids.discard(item.uid)
+            elif item.status == TodoItemStatus.NEEDS_ACTION:
+                self._uncompleted_uids.add(item.uid)
+                self._completed_uids.discard(item.uid)
             self.async_write_ha_state()
 
 

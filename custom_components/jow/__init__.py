@@ -30,6 +30,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async def handle_get_recipes(call: ServiceCall) -> ServiceResponse:
         """Handle get_recipes action returning recipes as JSON."""
         category = call.data.get("category", "recipes_to_cook")
+        include_cooked = call.data.get("include_cooked", False)
         recipes = []
         domain_data = hass.data.get(DOMAIN, {})
         for coordinator in domain_data.values():
@@ -51,6 +52,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                     recipes.extend([format_recipe(m) for m in pending])
                 break
 
+        if not include_cooked:
+            recipes = [r for r in recipes if not r.get("is_cooked")]
+
         return {
             "count": len(recipes),
             "recipes": recipes,
@@ -65,6 +69,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             vol.Optional("category", default="recipes_to_cook"): vol.In(
                 ["recipes_to_cook", "pending_menu", "all"]
             ),
+            vol.Optional("include_cooked", default=False): bool,
         }),
         supports_response=SupportsResponse.ONLY,
     )

@@ -10,9 +10,16 @@ get_recipes:
       selector:
         select:
           options:
-            - label: Recipes to Cook (Remaining)
+            - label: Recipes to Cook
               value: recipes_to_cook
             - label: Planned Menu
               value: pending_menu
             - label: All Recipes
               value: all
+    include_cooked:
+      name: Include Cooked
+      description: Whether to include recipes that have already been marked as cooked.
+      required: false
+      default: false
+      selector:
+        boolean:
