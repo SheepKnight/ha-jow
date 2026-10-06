@@ -1,0 +1,18 @@
+get_recipes:
+  name: Get Recipes (JSON)
+  description: Returns recipes (to cook or planned menu) as a structured JSON list for automations and scripts.
+  fields:
+    category:
+      name: Category
+      description: Category of recipes to retrieve.
+      required: false
+      default: recipes_to_cook
+      selector:
+        select:
+          options:
+            - label: Recipes to Cook (Remaining)
+              value: recipes_to_cook
+            - label: Planned Menu
+              value: pending_menu
+            - label: All Recipes
+              value: all

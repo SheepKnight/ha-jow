@@ -1,6 +1,8 @@
 """Sensor platform for Jow integration."""
 
+import json
 from typing import Any, Dict, List, Optional
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -69,21 +71,16 @@ class JowPendingMenuSensor(JowBaseSensor):
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
-        """Return the list of meals as JSON-serializable list."""
+        """Return the list of meals as JSON-serializable list and JSON string."""
+        from .todo import format_recipe
         menu = self.letscook_data.get("pendingMenu") or {}
         meals = menu.get("meals") or menu.get("recipes") or []
-        formatted_meals = []
-        for m in meals:
-            rec = m.get("recipe") or {}
-            formatted_meals.append({
-                "title": rec.get("title") or m.get("title"),
-                "id": rec.get("id") or rec.get("_id"),
-                "covers": m.get("coversCount", 2),
-                "cooking_time": rec.get("cookingTime"),
-                "preparation_time": rec.get("preparationTime"),
-                "image_url": rec.get("imageUrl"),
-            })
-        return {"meals": formatted_meals}
+        formatted = [format_recipe(m) for m in meals]
+        return {
+            "count": len(formatted),
+            "recipes": formatted,
+            "recipes_json": json.dumps(formatted, ensure_ascii=False),
+        }
 
 
 class JowRecipesToCookSensor(JowBaseSensor):
@@ -101,20 +98,17 @@ class JowRecipesToCookSensor(JowBaseSensor):
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
-        """Return the list of recipes to cook as JSON."""
+        """Return the list of recipes to cook as JSON-serializable list and JSON string."""
+        from .todo import format_recipe
         recipes_data = self.letscook_data.get("recipesToCook") or {}
         meals = recipes_data.get("meals") or recipes_data.get("recipes") or []
-        formatted = []
-        for m in meals:
-            rec = m.get("recipe") or {}
-            formatted.append({
-                "title": rec.get("title") or m.get("title"),
-                "id": rec.get("id") or rec.get("_id"),
-                "covers": m.get("coversCount", 2),
-                "cooking_time": rec.get("cookingTime"),
-                "preparation_time": rec.get("preparationTime"),
-            })
-        return {"meals": formatted}
+        formatted = [format_recipe(m) for m in meals]
+        return {
+            "count": len(formatted),
+            "recipes": formatted,
+            "recipes_json": json.dumps(formatted, ensure_ascii=False),
+        }
+
 
 
 class JowSharedRecipesSensor(JowBaseSensor):

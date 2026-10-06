@@ -142,7 +142,7 @@ class JowApiClient:
 
     async def async_get_letscook(
         self,
-        preferred_limit: int = 20,
+        preferred_limit: int = 100,
         projection_fields: Optional[List[str]] = None,
         zone_id: str = "FR",
     ) -> Dict[str, Any]:

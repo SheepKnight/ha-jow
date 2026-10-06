@@ -14,6 +14,8 @@ _LOGGER = logging.getLogger(__name__)
 
 VIEW_LOGIN_URL = "/api/jow/login"
 VIEW_CALLBACK_URL = "/api/jow/callback"
+VIEW_RECIPES_URL = "/api/jow/recipes"
+
 
 LOGIN_HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
@@ -290,9 +292,12 @@ def ensure_views_registered(hass: HomeAssistant) -> None:
         hass.http.register_view(JowLoginView())
     if VIEW_CALLBACK_URL not in registered_paths:
         hass.http.register_view(JowCallbackView())
+    if VIEW_RECIPES_URL not in registered_paths:
+        hass.http.register_view(JowRecipesView())
 
     hass.data[DOMAIN]["views_registered"] = True
-    _LOGGER.info("Registered Jow HTTP views (/api/jow/login, /api/jow/callback)")
+    _LOGGER.info("Registered Jow HTTP views (/api/jow/login, /api/jow/callback, /api/jow/recipes)")
+
 
 
 class JowLoginView(HomeAssistantView):
@@ -388,4 +393,40 @@ class JowCallbackView(HomeAssistantView):
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "Content-Type",
         })
+
+
+class JowRecipesView(HomeAssistantView):
+    """View to return recipes as JSON for external tools/scripts."""
+
+    url = VIEW_RECIPES_URL
+    name = "api:jow:recipes"
+    requires_auth = False
+    cors_allowed = True
+
+    async def get(self, request: web.Request) -> web.Response:
+        """Return recipes to cook and pending menu as JSON."""
+        from .todo import format_recipe
+        from .coordinator import JowDataUpdateCoordinator
+
+        hass: HomeAssistant = request.app["hass"]
+        all_data: Dict[str, Any] = {
+            "recipes_to_cook": [],
+            "pending_menu": [],
+        }
+
+        domain_data = hass.data.get(DOMAIN, {})
+        for coordinator in domain_data.values():
+            if isinstance(coordinator, JowDataUpdateCoordinator) and coordinator.data:
+                letscook = coordinator.data.get("letscook", {})
+                to_cook = letscook.get("recipesToCook", {}).get("meals") or letscook.get("recipesToCook", {}).get("recipes") or []
+                pending = letscook.get("pendingMenu", {}).get("meals") or letscook.get("pendingMenu", {}).get("recipes") or []
+                all_data["recipes_to_cook"] = [format_recipe(m) for m in to_cook]
+                all_data["pending_menu"] = [format_recipe(m) for m in pending]
+                break
+
+        return web.json_response(all_data, headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type",
+        })
+
 
